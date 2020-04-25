@@ -6,6 +6,7 @@ var jwt = require('jsonwebtoken');
 module.exports = function (context, req) {
     context.log('JavaScript HTTP trigger function processed a request.');
 
+    // in app settings.
     const ZOOM_API_KEY = process.env.ZOOM_API_KEY;
     const ZOOM_API_SEC = process.env.ZOOM_API_SEC;
     
