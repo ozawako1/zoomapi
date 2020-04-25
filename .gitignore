@@ -353,3 +353,4 @@ MigrationBackup/
 GetUsers/sample.dat
 local.settings.json
 GetMeetings/sample.dat
+azure-functions-core-tools/
