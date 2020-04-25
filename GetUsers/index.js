@@ -38,7 +38,7 @@ module.exports = function (context, req) {
         .then(function (response) {
             //logic for your response
             context.log('User has', response);
-            var users = JSON.stringify(response);
+            var users = JSON.stringify(response.users);
             context.res = {
                 "status": 200,
                 "content-type": "application/json",
