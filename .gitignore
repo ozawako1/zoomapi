@@ -351,3 +351,4 @@ MigrationBackup/
 .env
 .DS_Store
 GetUsers/sample.dat
+local.settings.json
