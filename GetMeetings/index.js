@@ -1,9 +1,35 @@
+/*
+module.exports = async function (context, req) {
+    context.log('JavaScript HTTP trigger function processed a request.');
+
+    const name = (req.query.name || (req.body && req.body.name));
+    const responseMessage = name
+        ? "Hello, " + name + ". This HTTP triggered function executed successfully."
+        : "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response.";
+
+    context.res = {
+        // status: 200
+        body: responseMessage
+    };
+}
+*/
 
 var rp = require('request-promise');
 var jwt = require('jsonwebtoken');
 
 module.exports = function (context, req) {
     context.log('JavaScript HTTP trigger function processed a request.');
+
+    // query parameter is needed.
+    var zoom_user_id = req.query.uid;
+    if (zoom_user_id == "" || zoom_user_id == undefined) {
+        context.res = {
+            "status": 400,
+            "content-type": "application/json",
+            "body": { "Error": "Invalid Parameters." }
+        };
+        context.done();
+    }
 
     // in app settings.
     const ZOOM_API_KEY = process.env.ZOOM_API_KEY;
@@ -17,14 +43,14 @@ module.exports = function (context, req) {
     
     //Make Zoom API call
     var options = {
-        uri: 'https://api.zoom.us/v2/users',
+        uri: 'https://api.zoom.us/v2/users/' + uid +'/meetings',
         qs: {
-            status: 'active',
-            page_size: 100
+            type: 'upcoming', // -> uri + '?status=active'
+            page_size: 3
         },
         auth: {
-        //Provide your token here
-                'bearer': token
+            //Provide your token here
+            'bearer': token
         },
         headers: {
             'User-Agent': 'Zoom-Jwt-Request',
@@ -37,7 +63,7 @@ module.exports = function (context, req) {
         .then(function (response) {
             //logic for your response
             context.log('User has', response);
-            var users = JSON.stringify(response.users);
+            var users = JSON.stringify(response.meetings);
             context.res = {
                 "status": 200,
                 "content-type": "application/json",
