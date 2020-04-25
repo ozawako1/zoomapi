@@ -26,9 +26,9 @@ module.exports = function (context, req) {
         .catch(function (err) {
             context.log('API call failed, reason ', err);
             context.res = {
-                "status": 500,
+                "status": err.statusCode,
                 "content-type": "application/json",
-                "body": {Error: JSON.stringify(err)}
+                "body": {Error: err.message}
             };
             context.done();
         });
