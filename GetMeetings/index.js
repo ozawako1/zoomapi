@@ -57,11 +57,30 @@ function get_live_meeting(zuid){
 
 }
 
-function get_next_meeting(zuid){
+function is_same_mtg(mtg1, mtg2){
+    var ret = false;
+
+    if (mtg2 != null && mtg2.uuid != undefined) {
+        if (mtg1.uuid == mtg2.uuid){
+            ret = true;
+        }
+    }
+
+    return ret;
+}
+
+function get_next_meeting(zuid, livemtg){
     // in app settings.
     const ZOOM_ACCESS_URL = process.env.ZOOM_ACCESS_URL;
         
     var zoom_user_id = zuid;
+
+    var mtgs = new Array();
+    var live = null;
+    if (livemtg != null && livemtg.length > 0){
+        live = livemtg[0];
+        mtgs.push(live);
+    }
 
     return new Promise((resolve, reject) => {
         if (zoom_user_id == "" || zoom_user_id == undefined) {
@@ -79,18 +98,26 @@ function get_next_meeting(zuid){
 
             rp(options)
                 .then(function (response) {
-                    var mtg = null;
                     if (response.length != 0) {
                         var i = 0;
+                        var mtg = null;
                         while (i < response.length) {
-                            if (response[i].start_time != undefined) {
-                                mtg = response[i];  
-                                break;                              
+                            mtg = response[i];
+                            if (mtg.start_time != undefined) {
+                                if (is_same_mtg(mtg, live)) {
+                                    continue;
+                                } else {
+                                    mtgs.push(mtg);
+                                    //最大３つまで
+                                    if (mtgs.length >= 3) {
+                                        break;
+                                    }
+                                }               
                             }
                             i++;
                         }
                     }
-                    resolve(mtg);   // 次のMTGをかえす
+                    resolve(mtgs);   // 進行中のものも含めてMTGsをかえす
                 })
                 .catch(function (err) {
                     reject(err);
@@ -105,13 +132,9 @@ function get_meetings(zuid){
     return new Promise((resolve, reject) =>{
         get_live_meeting(zuid)
         .then((live) => {   
-            get_next_meeting(zuid)
-            .then((next) =>{
-                if (live.length > 0) {
-                    resolve(live.concat(next));
-                }else{
-                    resolve(next);
-                }
+            get_next_meeting(zuid, live)
+            .then((mtgs) =>{
+                resolve(mtgs);
             })
             .catch((err) => reject(err));
         })
