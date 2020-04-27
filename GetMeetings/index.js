@@ -104,9 +104,7 @@ function get_next_meeting(zuid, livemtg){
                         while (i < response.length) {
                             mtg = response[i];
                             if (mtg.start_time != undefined) {
-                                if (is_same_mtg(mtg, live)) {
-                                    continue;
-                                } else {
+                                if (is_same_mtg(mtg, live) == false) {
                                     mtgs.push(mtg);
                                     //最大３つまで
                                     if (mtgs.length >= 3) {
