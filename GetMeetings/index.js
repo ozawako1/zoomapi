@@ -5,8 +5,121 @@ var jwt = require('jsonwebtoken');
 /*
 // QUERY_STRING
 // zuid: Zoom User Id to GetMeetings
-// now : if "true", live Meeting
+// returns meeting object.
+// {
+// id: string       // meeting id
+// host_id: string  // host user id
+// topic: string    // meeting title
+// type: integer    // 1=instant, 2=scheduled, 3=recurring(w/o time), 4=recurring(w/time)
+// start_time: string
+// duration: integer    // minitus
+// timezone: string
+// created_at: string
+// join_url: string     // url to join live meeting
+// start_url: string    // url to start upcoming meeting
+// live: string     // if "true", meeting is active, else meeting is upcoming.
+// }
 */
+
+function get_live_meeting(zuid){
+
+    // in app settings.
+    const ZOOM_ACCESS_URL = process.env.ZOOM_ACCESS_URL;
+        
+    var zoom_user_id = zuid;
+
+    return new Promise((resolve, reject) => {
+        if (zoom_user_id == "" || zoom_user_id == undefined) {
+            reject(new Error("Invalid parameters. (zoom uid)"));
+        } else {        
+            var options = {
+                uri: ZOOM_ACCESS_URL,
+                qs: {
+                    func: 2, 
+                    zuid: zoom_user_id,
+                    type: 'live'
+                },
+                json: true
+            };
+            rp(options)
+                .then(function (response) {
+                    if (response.length !=0) {
+                        response[0].live = "true";
+                    }
+                    resolve(response);  //Live MTG をかえす。
+                })
+                .catch(function (err) {
+                    reject(err);
+                });
+        }
+    
+    });
+
+}
+
+function get_next_meeting(zuid){
+    // in app settings.
+    const ZOOM_ACCESS_URL = process.env.ZOOM_ACCESS_URL;
+        
+    var zoom_user_id = zuid;
+
+    return new Promise((resolve, reject) => {
+        if (zoom_user_id == "" || zoom_user_id == undefined) {
+            reject(new Error("Invalid parameters. (zoom uid)"));
+        } else {        
+            var options = {
+                uri: ZOOM_ACCESS_URL,
+                qs: {
+                    func: 2, 
+                    zuid: zoom_user_id,
+                    type: 'upcoming'
+                },
+                json: true
+            };
+
+            rp(options)
+                .then(function (response) {
+                    var mtg = null;
+                    if (response.length != 0) {
+                        var i = 0;
+                        while (i < response.length) {
+                            if (response[i].start_time != undefined) {
+                                mtg = response[i];  
+                                break;                              
+                            }
+                            i++;
+                        }
+                    }
+                    resolve(mtg);   // 次のMTGをかえす
+                })
+                .catch(function (err) {
+                    reject(err);
+                });
+        }
+    
+    });
+}
+
+function get_meetings(zuid){
+
+    return new Promise((resolve, reject) =>{
+        get_live_meeting(zuid)
+        .then((live) => {   
+            get_next_meeting(zuid)
+            .then((next) =>{
+                if (live.length > 0) {
+                    resolve(live.concat(next));
+                }else{
+                    resolve(next);
+                }
+            })
+            .catch((err) => reject(err));
+        })
+        .catch((err) => reject(err));
+    });
+
+}
+
 module.exports = function (context, req) {
     context.log('JavaScript HTTP trigger function processed a request.');
 
@@ -15,12 +128,6 @@ module.exports = function (context, req) {
         
     // query parameter is needed.
     var zoom_user_id = req.query.zuid;
-    var meeting_type = req.query.now;
-    if (meeting_type == "true") {
-        meeting_type = "live";
-    } else {
-        meeting_type = "upcoming";
-    }
 
     if (zoom_user_id == "" || zoom_user_id == undefined) {
         context.res = {
@@ -30,35 +137,22 @@ module.exports = function (context, req) {
         };
         context.done();
     } else {
-        
-        var options = {
-            uri: ZOOM_ACCESS_URL,
-            qs: {
-                func: 2, 
-                zuid: zoom_user_id,
-                type: meeting_type
-            }
-        };
-
-        rp(options)
-            .then(function (response) {
-                //logic for your response
-                context.log('User has', response);
+        get_meetings(zoom_user_id)
+            .then((result) => {
                 context.res = {
                     "status": 200,
                     "content-type": "application/json",
-                    "body": response
+                    "body": result
                 };
                 context.done();
             })
-            .catch(function (err) {
-                context.log('API call failed, reason ', err);
+            .catch((err) =>{
                 context.res = {
-                    "status": err.statusCode,
+                    "status": 500,
                     "content-type": "application/json",
-                    "body": {Error: err.message}
+                    "body": err
                 };
-                context.done();
+                context.done();               
             });
     }
 

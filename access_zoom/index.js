@@ -97,7 +97,7 @@ module.exports = function (context, req) {
                 context.res = {
                     "status": 200,
                     "content-type": "application/json",
-                    "body": JSON.stringify(rep)
+                    "body": rep
                 };
                 context.done();
             })
@@ -116,7 +116,7 @@ module.exports = function (context, req) {
         context.log('API call failed, reason ', e.body);
         context.res = {
             "status": e.status,
-            "content-type": "application/json",
+            //"content-type": "application/json",
             "body": { "Error": e.body }
         };
         context.done();
