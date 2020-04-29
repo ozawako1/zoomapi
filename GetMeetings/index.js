@@ -125,6 +125,7 @@ function get_next_meeting(zuid, livemtg){
     });
 }
 
+// この先の登録も含めて取得
 function get_meetings(zuid){
 
     return new Promise((resolve, reject) =>{
@@ -158,7 +159,9 @@ module.exports = function (context, req) {
         };
         context.done();
     } else {
-        get_meetings(zoom_user_id)
+        // live MTGのみ取得するように変更
+        //get_meetings(zoom_user_id)　
+        get_live_meeting(zoom_user_id)
             .then((result) => {
                 context.res = {
                     "status": 200,
