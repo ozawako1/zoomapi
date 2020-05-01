@@ -3,6 +3,7 @@ var jwt = require('jsonwebtoken');
 
 const FUNC_USERS = 1;
 const FUNC_MEETINGS = 2;
+const FUNC_CREATEMEETING = 3;
 
 function is_empty(x){
     var ret = false;
@@ -14,20 +15,30 @@ function is_empty(x){
 
 /*
 // QUERY_STRING
-// func: 1=GetUsers, 2=GetMeetings
+// func: 1=GetUsers, 2=GetMeetings, 3=CreateMeeting
 // zuid: Zoom User Id to GetMeetings
 // now : Zoom Meeting Type ("live", "upcoming")
  */
 
 module.exports = function (context, req) {
-    context.log('JavaScript HTTP trigger function processed a request.');
+    context.log('access_zoom HTTP trigger function processed a request.');
+
+    var requests;
+    
+    if (req.method == "GET") {
+        requests = req.query;
+    } else {
+        requests = req.body;
+    }
 
     // query parameter is needed.
-    var FUNC_TYPE = parseInt(req.query.func);
+    var FUNC_TYPE = parseInt(requests.func)
+    var m_zuid = requests.zuid;
+
     var z_uri = "";
-    var m_zuid = req.query.zuid;
-    var m_type = req.query.type;
     var z_qs = "";
+    var z_body = null;
+    var z_method = "GET";
 
     try {
     
@@ -43,9 +54,37 @@ module.exports = function (context, req) {
             if (is_empty(m_zuid)){
                 throw { 'status': 400, 'body': "zuid or mtype missing."};
             }
+            var m_type = requests.type;
             z_uri = 'https://api.zoom.us/v2/users/' + m_zuid +'/meetings',
             z_qs = {
                 type: m_type
+            };
+            break;
+        case FUNC_CREATEMEETING:
+            /*
+            body: {
+                func: 3
+                zuid: req.body.zname,
+                topic: req.body.topic,
+                type: 2,
+                start_time: req.body.stime,
+                duration: req.body.duration,
+                timezone: 'Asia/Tokyo',
+                password: 'motex'
+            }
+            */
+            if (is_empty(m_zuid)){
+                throw { 'status': 400, 'body': "zuid or mtype missing."};
+            }
+            z_method = "POST";
+            z_uri = 'https://api.zoom.us/v2/users/' + m_zuid +'/meetings',
+            z_body = {
+                topic: requests.topic,
+                type: parseInt(requests.type),
+                start_time: requests.start_time,
+                duration: requests.duration,
+                timezone: requests.timezone,
+                password: requests.password
             };
             break;
         default:
@@ -65,6 +104,7 @@ module.exports = function (context, req) {
         
         //Make Zoom API call
         var options = {
+            method: z_method,
             uri: z_uri,
             qs: z_qs,
             auth: {
@@ -74,6 +114,7 @@ module.exports = function (context, req) {
                 'User-Agent': 'Zoom-Jwt-Request',
                 'content-type': 'application/json'
             },
+            body: z_body,
             json: true // Automatically parses the JSON string in the response
         };
 
@@ -89,6 +130,20 @@ module.exports = function (context, req) {
                     break;
                 case FUNC_MEETINGS:
                     rep = response.meetings;
+                    break;
+                case FUNC_CREATEMEETING:
+                    /*
+                    topic: response.topic,
+                    start_url: response.start_url,
+                    join_url: response.join_url,
+                    password: response.password
+                    */
+                    rep = {
+                        topic: response.topic,
+                        start_url: response.start_url,
+                        join_url: response.join_url,
+                        password: response.password
+                    };
                     break;
                 default:
                     break;

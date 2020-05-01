@@ -1,6 +1,5 @@
 var rp = require('request-promise');
-var jwt = require('jsonwebtoken');
-
+var sql = require('../sqldb.js');
 
 /*
 // QUERY_STRING
@@ -139,7 +138,15 @@ function get_meetings(zuid){
         })
         .catch((err) => reject(err));
     });
+}
 
+function get_zid_from_email(email){
+
+    return new Promise((resolve, reject) =>{
+        sql.query_id_from_email(email)
+        .then((zid) => resolve(zid))
+        .catch((err) => reject(err));
+    });
 }
 
 module.exports = function (context, req) {
@@ -149,9 +156,9 @@ module.exports = function (context, req) {
     const ZOOM_ACCESS_URL = process.env.ZOOM_ACCESS_URL;
         
     // query parameter is needed.
-    var zoom_user_id = req.query.zuid;
+    var zmail = req.query.zmail;
 
-    if (zoom_user_id == "" || zoom_user_id == undefined) {
+    if (zmail == "" || zmail == undefined) {
         context.res = {
             "status": 400,
             "content-type": "application/json",
@@ -159,25 +166,24 @@ module.exports = function (context, req) {
         };
         context.done();
     } else {
-        // live MTGのみ取得するように変更
-        //get_meetings(zoom_user_id)　
-        get_live_meeting(zoom_user_id)
-            .then((result) => {
-                context.res = {
-                    "status": 200,
-                    "content-type": "application/json",
-                    "body": result
-                };
-                context.done();
-            })
-            .catch((err) =>{
-                context.res = {
-                    "status": 500,
-                    "content-type": "application/json",
-                    "body": err
-                };
-                context.done();               
-            });
+        get_zid_from_email(zmail)
+        .then((zid) => get_live_meeting(zid))
+        .then((result) => {
+            context.res = {
+                "status": 200,
+                "content-type": "application/json",
+                "body": result
+            };
+            context.done();
+        })
+        .catch((err) => {
+            context.res = {
+                "status": 500,
+                "content-type": "application/json",
+                "body": err
+            };
+            context.done();               
+        });
     }
 
 };

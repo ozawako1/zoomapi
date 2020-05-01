@@ -1,3 +1,10 @@
 {
-    "name": "Azure"
+    "func": 3,
+    "zuid": "mjgPmQMlQK652QCoD8USlA",
+    "topic": "MEETING TOPICS by API",
+    "type": 2,
+    "start_time": "2020-05-05T09:30:00Z+09:00",
+    "duration": 60,
+    "timezone": "Asia/Tokyo",
+    "password": "motex"
 }
